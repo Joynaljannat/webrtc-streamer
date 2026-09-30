@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 Security Stream</title>
+    <title>ESP32-S3 WebRTC Security Live Stream</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; background: #121212; color: #fff; margin: 0; padding: 20px; }
-        #video-container { width: 100%; max-width: 640px; margin: 20px auto; border: 2px solid #333; border-radius: 8px; overflow: hidden; background: #000; }
+        h2 { margin-bottom: 10px; color: #00ffcc; }
+        #video-container { width: 100%; max-width: 640px; margin: 0 auto; border: 2px solid #333; border-radius: 8px; overflow: hidden; background: #000; }
         video { width: 100%; height: auto; display: block; }
-        .status { margin-top: 15px; font-size: 14px; color: #00ff00; }
+        .status { margin-top: 15px; font-size: 14px; color: #aaa; }
     </style>
 </head>
 <body>
-    <h2>🔴 WebRTC Security Live Stream</h2>
+    <h2>🔴 Live Security Stream</h2>
     <div id="video-container">
-        <video id="remoteVideo" autoplay playsinline controls></video>
+        <video id="remoteVideo" autoplay playsinline muted controls></video>
     </div>
     <div class="status" id="status">Connecting to ESP32 device...</div>
 
@@ -24,15 +25,28 @@
         const statusDiv = document.getElementById('status');
 
         if (!roomId) {
-            statusDiv.innerText = "Error: Invalid Room ID!";
+            statusDiv.innerText = "Error: Invalid or Missing Room ID!";
         } else {
-            statusDiv.innerText = "Connected to Device ID: " + roomId;
+            statusDiv.innerText = "Connecting to Device Room: " + roomId;
             const pc = new RTCPeerConnection({
-                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' }
+                ]
             });
 
             pc.ontrack = (event) => {
-                document.getElementById('remoteVideo').srcObject = event.streams[0];
+                const videoElem = document.getElementById('remoteVideo');
+                videoElem.srcObject = event.streams[0];
+                videoElem.play().catch(e => console.log("Autoplay blocked:", e));
+                statusDiv.innerText = "Connected! Live video playing.";
+            };
+
+            pc.oniceconnectionstatechange = () => {
+                if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+                    statusDiv.innerText = "Connection lost or blocked by firewall.";
+                }
             };
         }
     </script>
